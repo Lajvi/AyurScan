@@ -18,9 +18,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.ayurscan.viewmodel.AuthState
+import com.example.ayurscan.viewmodel.AuthViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,17 +35,21 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AyurScanApp() {
+fun AyurScanApp(authViewModel: AuthViewModel = viewModel()) {
     val navController = rememberNavController()
     // State to hold the result of the quiz
     var doshaResult by remember { mutableStateOf("Vata") } // Default value
+    val authState by authViewModel.authState.collectAsState()
+
+    // Determine the start destination based on Auth State
+    val startDest = if (authState is AuthState.Authenticated) "home" else "slide"
 
     // Common Back Navigation Logic
     val onBackToHome: () -> Unit = {
         navController.popBackStack("home", inclusive = false)
     }
 
-    NavHost(navController = navController, startDestination = "slide") {
+    NavHost(navController = navController, startDestination = startDest) {
         composable("slide") {
             com.example.ayurscan.ui.screens.SlideScreen(onStartJourneyClick = {
                 Log.d("AyurScanApp", "Button clicked")
@@ -50,9 +57,14 @@ fun AyurScanApp() {
             })
         }
         composable("loginpage") {
-            com.example.ayurscan.ui.screens.LoginScreen(onSignInClick = {
-                navController.navigate("home")
-            })
+            com.example.ayurscan.ui.screens.LoginScreen(
+                authViewModel = authViewModel,
+                onSignInClick = {
+                    navController.navigate("home") {
+                        popUpTo(0) { inclusive = true } // Clear back stack on login
+                    }
+                }
+            )
         }
         composable("home") {
             com.example.ayurscan.ui.screens.HomeScreen(
