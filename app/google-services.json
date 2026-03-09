@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "878823277735",
+    "project_id": "ayurscan-3bc31",
+    "storage_bucket": "ayurscan-3bc31.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:878823277735:android:ac7e76e018dee374d1c782",
+        "android_client_info": {
+          "package_name": "com.example.ayurscan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFF1bGKwFhU0FLOg8SjQ7tekQaSpMarPM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,6 +1,7 @@
 package com.example.ayurscan.ui.screens
 
-import androidx.compose.foundation.Image
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContextimport androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,13 +21,32 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ayurscan.R
+import com.example.ayurscan.viewmodel.AuthState
+import com.example.ayurscan.viewmodel.AuthViewModel
 
 @Composable
 fun LoginScreen(
+    authViewModel: AuthViewModel,
     onSignInClick: () -> Unit
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var isSignUp by remember { mutableStateOf(false) }
+    
+    val authState = authViewModel.authState.collectAsState()
+    val context = LocalContext.current
+    
+    // Navigate on successful auth
+    LaunchedEffect(authState.value) {
+        when (authState.value) {
+            is AuthState.Authenticated -> onSignInClick()
+            is AuthState.Error -> {
+                Toast.makeText(context, (authState.value as AuthState.Error).message, Toast.LENGTH_LONG).show()
+                // Avoid repeated showing if recomposed, although typically state moves back to unauth or stays error
+            }
+            else -> {}
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -53,7 +73,7 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "LOGIN/ SIGN UP",
+                text = if (isSignUp) "SIGN UP" else "LOGIN",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black, // Or Dark Green/Black based on contrast
@@ -124,7 +144,14 @@ fun LoginScreen(
 
             // Sign In Button
             Button(
-                onClick = onSignInClick,
+                onClick = {
+                    if (isSignUp) {
+                        authViewModel.signup(username, password)
+                    } else {
+                        authViewModel.login(username, password)
+                    }
+                },
+                enabled = authState.value != AuthState.Loading,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4E7040)), // Dark Green
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier
@@ -132,7 +159,11 @@ fun LoginScreen(
                     .width(150.dp)
                     .border(1.dp, Color.White, RoundedCornerShape(8.dp))
             ) {
-                Text("Sign In", color = Color.White, fontSize = 16.sp)
+                if (authState.value == AuthState.Loading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text(if (isSignUp) "Sign Up" else "Sign In", color = Color.White, fontSize = 16.sp)
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -175,16 +206,16 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(30.dp))
 
             Text(
-                "Don't have an account?",
+                if (isSignUp) "Already have an account?" else "Don't have an account?",
                 color = Color.White,
                 fontSize = 14.sp
             )
             Text(
-                "Sign up",
+                if (isSignUp) "Log in" else "Sign up",
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
-                modifier = Modifier.clickable { }
+                modifier = Modifier.clickable { isSignUp = !isSignUp }
             )
         }
     }
