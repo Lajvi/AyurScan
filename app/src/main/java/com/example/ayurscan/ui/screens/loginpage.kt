@@ -1,7 +1,8 @@
 package com.example.ayurscan.ui.screens
-
+import androidx.compose.runtime.collectAsState
 import android.widget.Toast
-import androidx.compose.ui.platform.LocalContextimport androidx.compose.foundation.Image
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
