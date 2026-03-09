@@ -24,6 +24,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.ayurscan.viewmodel.AuthState
 import com.example.ayurscan.viewmodel.AuthViewModel
+import com.example.ayurscan.viewmodel.FoodScannerViewModel
 import androidx.compose.runtime.collectAsState
 
 class MainActivity : ComponentActivity() {
@@ -36,7 +37,10 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AyurScanApp(authViewModel: AuthViewModel = viewModel()) {
+fun AyurScanApp(
+    authViewModel: AuthViewModel = viewModel(),
+    foodScannerViewModel: FoodScannerViewModel = viewModel()
+) {
     val navController = rememberNavController()
     // State to hold the result of the quiz
     var doshaResult by remember { mutableStateOf("Vata") } // Default value
@@ -72,7 +76,8 @@ fun AyurScanApp(authViewModel: AuthViewModel = viewModel()) {
                 onHomeClick = { /* Already on Home */ },
                 onHeartClick = { navController.navigate("details") },
                 onSmileClick = { navController.navigate("score") },
-                onBellClick = { navController.navigate("quiz") }
+                onBellClick = { navController.navigate("quiz") },
+                onScanClick = { navController.navigate("scanner") } // Open Scan Mode
             )
         }
         composable("details") {
@@ -97,6 +102,13 @@ fun AyurScanApp(authViewModel: AuthViewModel = viewModel()) {
                     doshaResult = result
                     navController.navigate("score")
                 },
+                onBack = onBackToHome
+            )
+        }
+        composable("scanner") {
+            com.example.ayurscan.ui.screens.ScannerScreen(
+                userDosha = doshaResult,
+                viewModel = foodScannerViewModel,
                 onBack = onBackToHome
             )
         }

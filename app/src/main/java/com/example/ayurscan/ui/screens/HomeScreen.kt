@@ -23,6 +23,7 @@ import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,7 +44,8 @@ fun HomeScreen(
     onHomeClick: () -> Unit = {},
     onHeartClick: () -> Unit,
     onSmileClick: () -> Unit,
-    onBellClick: () -> Unit
+    onBellClick: () -> Unit,
+    onScanClick: () -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedDosha by remember { mutableStateOf<DoshaDetail?>(null) }
@@ -82,6 +84,15 @@ fun HomeScreen(
                 onSmileClick = onSmileClick,
                 onBellClick = onBellClick
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onScanClick,
+                containerColor = Color(0xFFFFA726), // Orange vibrant FAB
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Scan Food", modifier = Modifier.size(28.dp))
+            }
         }
     ) { innerPadding ->
         Column(
