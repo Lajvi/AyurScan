@@ -37,6 +37,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ayurscan.R
+import com.example.ayurscan.data.FirestoreRepository
+import com.example.ayurscan.model.FoodScanRecord
+import com.example.ayurscan.model.UserProfile
+import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,6 +55,17 @@ fun HomeScreen(
     var selectedDosha by remember { mutableStateOf<DoshaDetail?>(null) }
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
+    
+    val repository = remember { FirestoreRepository() }
+    var userProfile by remember { mutableStateOf<UserProfile?>(null) }
+    var recentScans by remember { mutableStateOf<List<FoodScanRecord>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
+            userProfile = repository.getUserProfile(uid)
+            recentScans = repository.getRecentScans(uid)
+        }
+    }
 
     // Sample Data
     val foodCategories = remember {
@@ -103,6 +118,7 @@ fun HomeScreen(
         ) {
             // Header
             HeaderSection(
+                userName = userProfile?.name ?: "Guest",
                 searchQuery = searchQuery,
                 onSearchQueryChange = { searchQuery = it }
             )
@@ -119,6 +135,35 @@ fun HomeScreen(
                 BannerSection()
 
                 Spacer(modifier = Modifier.height(16.dp))
+
+                if (recentScans.isNotEmpty()) {
+                    Text(
+                        text = "Recent Scans",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    recentScans.take(3).forEach { scan ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(scan.foodName, fontWeight = FontWeight.Bold, color = Color(0xFF2E4E28))
+                                Text(
+                                    scan.doshicAnalysis.take(100) + "...",
+                                    fontSize = 12.sp,
+                                    maxLines = 2,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
 
                 // Dosha Chips
                 DoshaChipsSection(
@@ -170,6 +215,7 @@ fun HomeScreen(
 
 @Composable
 fun HeaderSection(
+    userName: String,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit
 ) {
@@ -202,7 +248,7 @@ fun HeaderSection(
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
-                    text = "Hi, Swati",
+                    text = "Hi, $userName",
                     color = Color.Black,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp

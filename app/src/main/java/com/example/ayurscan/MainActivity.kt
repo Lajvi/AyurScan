@@ -26,6 +26,10 @@ import com.example.ayurscan.viewmodel.AuthState
 import com.example.ayurscan.viewmodel.AuthViewModel
 import com.example.ayurscan.viewmodel.FoodScannerViewModel
 import androidx.compose.runtime.collectAsState
+import com.example.ayurscan.data.FirestoreRepository
+import com.example.ayurscan.model.UserProfile
+import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.runtime.LaunchedEffect
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,6 +49,18 @@ fun AyurScanApp(
     // State to hold the result of the quiz
     var doshaResult by remember { mutableStateOf("Vata") } // Default value
     val authState by authViewModel.authState.collectAsState()
+    val repository = remember { FirestoreRepository() }
+
+    // Fetch user profile on login
+    LaunchedEffect(authState) {
+        if (authState is AuthState.Authenticated) {
+            FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
+                repository.getUserProfile(uid)?.let { profile ->
+                    doshaResult = profile.primaryDosha
+                }
+            }
+        }
+    }
 
     // Determine the start destination based on Auth State
     val startDest = if (authState is AuthState.Authenticated) "home" else "slide"
@@ -97,9 +113,16 @@ fun AyurScanApp(
             )
         }
         composable("quiz") {
+            val scope = rememberCoroutineScope()
             com.example.ayurscan.ui.screens.QuizScreen(
                 onQuizComplete = { result ->
                     doshaResult = result
+                    // Persist to Firestore
+                    scope.launch {
+                        FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
+                            repository.updateUserDosha(uid, result)
+                        }
+                    }
                     navController.navigate("score")
                 },
                 onBack = onBackToHome

@@ -9,6 +9,9 @@ import com.google.ai.client.generativeai.type.content
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.example.ayurscan.data.FirestoreRepository
+import com.example.ayurscan.model.FoodScanRecord
+import com.google.firebase.auth.FirebaseAuth
 
 sealed class ScannerState {
     object Idle : ScannerState()
@@ -23,6 +26,9 @@ class FoodScannerViewModel : ViewModel() {
         modelName = "gemini-1.5-flash",
         apiKey = BuildConfig.GEMINI_API_KEY
     )
+
+    private val repository = FirestoreRepository()
+    private val auth = FirebaseAuth.getInstance()
 
     private val _scannerState = MutableStateFlow<ScannerState>(ScannerState.Idle)
     val scannerState: StateFlow<ScannerState> = _scannerState
@@ -63,6 +69,15 @@ class FoodScannerViewModel : ViewModel() {
                 val responseText = response.text
                 if (responseText != null) {
                     _scannerState.value = ScannerState.Success(responseText)
+                    // Save to Firestore
+                    auth.currentUser?.uid?.let { uid ->
+                        val record = FoodScanRecord(
+                            userId = uid,
+                            foodName = textQuery ?: "Unknown Food",
+                            doshicAnalysis = responseText
+                        )
+                        repository.saveFoodScan(record)
+                    }
                 } else {
                     _scannerState.value = ScannerState.Error("AI returned an empty response.")
                 }

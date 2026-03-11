@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import com.example.ayurscan.data.FirestoreRepository
+import com.example.ayurscan.model.UserProfile
 
 sealed class AuthState {
     object Unauthenticated : AuthState()
@@ -17,6 +19,7 @@ sealed class AuthState {
 
 class AuthViewModel : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
+    private val repository = FirestoreRepository()
     
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
     val authState: StateFlow<AuthState> = _authState
@@ -59,7 +62,15 @@ class AuthViewModel : ViewModel() {
         _authState.value = AuthState.Loading
         viewModelScope.launch {
             try {
-                auth.createUserWithEmailAndPassword(email, pass).await()
+                val result = auth.createUserWithEmailAndPassword(email, pass).await()
+                result.user?.let { user ->
+                    val profile = UserProfile(
+                        uid = user.uid,
+                        email = email,
+                        name = email.substringBefore("@") // Default name
+                    )
+                    repository.saveUserProfile(profile)
+                }
                 _authState.value = AuthState.Authenticated
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(e.message ?: "Sign up failed")

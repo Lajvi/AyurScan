@@ -82,4 +82,7 @@ dependencies {
     implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
     // Coil for Compose (Image Loading)
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // Firestore
+    implementation("com.google.firebase:firebase-firestore-ktx")
 }
