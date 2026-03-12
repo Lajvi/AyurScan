@@ -93,7 +93,10 @@ fun AyurScanApp(
                 onHeartClick = { navController.navigate("details") },
                 onSmileClick = { navController.navigate("score") },
                 onBellClick = { navController.navigate("quiz") },
-                onScanClick = { navController.navigate("scanner") } // Open Scan Mode
+                onScanClick = { navController.navigate("scanner") }, // Open Scan Mode
+                onLogout = {
+                    authViewModel.logout()
+                }
             )
         }
         composable("details") {

@@ -16,8 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -49,7 +48,8 @@ fun HomeScreen(
     onHeartClick: () -> Unit,
     onSmileClick: () -> Unit,
     onBellClick: () -> Unit,
-    onScanClick: () -> Unit = {}
+    onScanClick: () -> Unit = {},
+    onLogout: () -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedDosha by remember { mutableStateOf<DoshaDetail?>(null) }
@@ -120,7 +120,8 @@ fun HomeScreen(
             HeaderSection(
                 userName = userProfile?.name ?: "Guest",
                 searchQuery = searchQuery,
-                onSearchQueryChange = { searchQuery = it }
+                onSearchQueryChange = { searchQuery = it },
+                onLogout = onLogout
             )
 
             // Main Content Area with rounded top corners
@@ -217,7 +218,8 @@ fun HomeScreen(
 fun HeaderSection(
     userName: String,
     searchQuery: String,
-    onSearchQueryChange: (String) -> Unit
+    onSearchQueryChange: (String) -> Unit,
+    onLogout: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -263,22 +265,37 @@ fun HeaderSection(
         }
 
         // Search Bar
-        TextField(
-            value = searchQuery,
-            onValueChange = onSearchQueryChange,
-            placeholder = { Text("Search Dosha/Food", fontSize = 12.sp) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
-            ),
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier
-                .width(160.dp) // Slightly wider for utility
-                .height(50.dp)
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                placeholder = { Text("Search", fontSize = 12.sp) }, // Shortened placeholder
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                ),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .width(130.dp) // Adjusted width for logout icon
+                    .height(50.dp)
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            IconButton(onClick = onLogout) {
+                Icon(
+                    imageVector = Icons.Default.ExitToApp,
+                    contentDescription = "Logout",
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
     }
 }
 
