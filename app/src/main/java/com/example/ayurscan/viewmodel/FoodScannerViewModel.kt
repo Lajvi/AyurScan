@@ -23,7 +23,7 @@ sealed class ScannerState {
 class FoodScannerViewModel : ViewModel() {
 
     private val generativeModel = GenerativeModel(
-        modelName = "gemini-1.5-flash",
+        modelName = "gemini-1.5-flash-latest",
         apiKey = BuildConfig.GEMINI_API_KEY
     )
 

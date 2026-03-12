@@ -14,6 +14,8 @@ if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
 val geminiApiKey = localProperties.getProperty("GEMINI_API_KEY") ?: ""
+val edamamAppId = localProperties.getProperty("EDAMAM_APP_ID") ?: ""
+val edamamAppKey = localProperties.getProperty("EDAMAM_APP_KEY") ?: ""
 
 android {
     namespace = "com.example.ayurscan"
@@ -29,6 +31,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         buildConfigField("String", "GEMINI_API_KEY", "\"${geminiApiKey}\"")
+        buildConfigField("String", "EDAMAM_APP_ID", "\"${edamamAppId}\"")
+        buildConfigField("String", "EDAMAM_APP_KEY", "\"${edamamAppKey}\"")
     }
 
     buildTypes {
@@ -85,4 +89,18 @@ implementation("androidx.compose.material:material-icons-extended")
 
     // Firestore
     implementation("com.google.firebase:firebase-firestore-ktx")
+    //coroutine
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation( "androidx.compose.material:material-icons-extended")
+
+    // Retrofit & Gson
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    // OkHttp Logging Interceptor
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+
+    //tensor flow
+    implementation("org.tensorflow:tensorflow-lite:2.13.0")
+    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+    implementation("org.tensorflow:tensorflow-lite-metadata:0.4.4")
 }

@@ -23,6 +23,8 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.Icons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,7 +41,13 @@ import com.example.ayurscan.R
 import com.example.ayurscan.data.FirestoreRepository
 import com.example.ayurscan.model.FoodScanRecord
 import com.example.ayurscan.model.UserProfile
+import com.example.ayurscan.data.network.Recipe
+import com.example.ayurscan.ui.viewmodels.RecipeViewModel
 import com.google.firebase.auth.FirebaseAuth
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.ui.text.style.TextOverflow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,7 +57,8 @@ fun HomeScreen(
     onSmileClick: () -> Unit,
     onBellClick: () -> Unit,
     onScanClick: () -> Unit = {},
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    viewModel: RecipeViewModel = viewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedDosha by remember { mutableStateOf<DoshaDetail?>(null) }
@@ -67,29 +76,9 @@ fun HomeScreen(
         }
     }
 
-    // Sample Data
-    val foodCategories = remember {
-        listOf(
-            FoodCategory("1", "Vata-friendly Foods", R.drawable.ayurfirstimage, "Vata"),
-            FoodCategory("2", "Pitta Cooling Foods", R.drawable.ayurfirstimage, "Pitta"),
-            FoodCategory("3", "Kapha Light Meals", R.drawable.ayurfirstimage, "Kapha"),
-            FoodCategory("4", "Tridoshic Balance", R.drawable.ayurfirstimage, "All"),
-            FoodCategory("5", "Vata Breakfasts", R.drawable.ayurfirstimage, "Vata"),
-            FoodCategory("6", "Pitta Teas", R.drawable.ayurfirstimage, "Pitta")
-        )
-    }
-
-    // Filter Logic
-    val filteredRecommendations = remember(searchQuery) {
-        if (searchQuery.isBlank()) {
-            foodCategories
-        } else {
-            foodCategories.filter {
-                it.name.contains(searchQuery, ignoreCase = true) ||
-                it.doshaType.contains(searchQuery, ignoreCase = true)
-            }
-        }
-    }
+    val recipes by viewModel.recipes.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
     Scaffold(
         bottomBar = {
@@ -170,6 +159,9 @@ fun HomeScreen(
                 DoshaChipsSection(
                     onDoshaClick = { doshaName ->
                         selectedDosha = getDoshaDetails(doshaName)
+                        if (doshaName.isNotEmpty()) {
+                            viewModel.fetchRecipes(doshaName.lowercase())
+                        }
                     }
                 )
 
@@ -198,7 +190,17 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Recommendation Grid
-                RecommendationGrid(items = filteredRecommendations)
+                if (isLoading) {
+                    Box(modifier = Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color(0xFFFFA726))
+                    }
+                } else if (!errorMessage.isNullOrBlank()) {
+                    Text(text = errorMessage ?: "Error", color = Color.Red, modifier = Modifier.padding(16.dp))
+                } else if (recipes.isEmpty()) {
+                    Text("No recipes found.", modifier = Modifier.padding(16.dp))
+                } else {
+                    RecommendationGrid(items = recipes)
+                }
             }
         }
 
@@ -390,7 +392,7 @@ fun DoshaChip(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
 }
 
 @Composable
-fun RecommendationGrid(items: List<FoodCategory>) {
+fun RecommendationGrid(items: List<Recipe>) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -398,47 +400,98 @@ fun RecommendationGrid(items: List<FoodCategory>) {
         modifier = Modifier.fillMaxSize()
     ) {
         items(items) { item ->
-            FoodCategoryCard(item)
+            RecipeCard(item)
         }
     }
 }
 
 @Composable
-fun FoodCategoryCard(item: FoodCategory) {
+fun RecipeCard(recipe: Recipe) {
+    var expanded by remember { mutableStateOf(false) }
+
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
-            .height(160.dp)
-            .clickable { /* Navigate to detail */ },
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .fillMaxWidth()
+            .clickable { expanded = !expanded },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Image(
-                painter = painterResource(id = item.imageRes),
-                contentDescription = item.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-            // Gradient overlay for text readability
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        androidx.compose.ui.graphics.Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)),
-                            startY = 100f
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.height(120.dp).fillMaxWidth()) {
+                AsyncImage(
+                    model = recipe.image,
+                    contentDescription = recipe.label,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                // Gradient overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
+                                startY = 50f
+                            )
                         )
+                )
+                Text(
+                    text = "${recipe.calories.toInt()} kcal",
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp)
+                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                )
+            }
+            
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = recipe.label,
+                    color = Color(0xFF2C3E28),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    maxLines = if (expanded) Int.MAX_VALUE else 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                if (recipe.dietLabels.isNotEmpty()) {
+                    Text(
+                        text = recipe.dietLabels.joinToString(", "),
+                        color = Color(0xFFFFA726),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
-            )
-            Text(
-                text = item.name,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(12.dp)
-            )
+                }
+
+                if (expanded) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Ingredients:",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.DarkGray
+                    )
+                    recipe.ingredientLines.take(5).forEach { ingredient ->
+                        Text(
+                            text = "• $ingredient",
+                            fontSize = 10.sp,
+                            color = Color.Gray,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    if (recipe.ingredientLines.size > 5) {
+                        Text("...", fontSize = 10.sp, color = Color.Gray)
+                    }
+                }
+            }
         }
     }
 }
