@@ -11,12 +11,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.example.ayurscan.data.FirestoreRepository
 import com.example.ayurscan.model.FoodScanRecord
+import com.example.ayurscan.model.FoodItem
+import com.example.ayurscan.model.MedicineItem
+import com.example.ayurscan.network.RetrofitClient
 import com.google.firebase.auth.FirebaseAuth
 
 sealed class ScannerState {
     object Idle : ScannerState()
     object Loading : ScannerState()
     data class Success(val result: String) : ScannerState()
+    data class FoodRecommendationSuccess(val foods: List<FoodItem>) : ScannerState()
+    data class MedicineRecommendationSuccess(val medicines: List<MedicineItem>) : ScannerState()
     data class Error(val message: String) : ScannerState()
 }
 
@@ -83,6 +88,38 @@ class FoodScannerViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                _scannerState.value = ScannerState.Error("Analysis failed: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    fun fetchFoodRecommendations(userDosha: String) {
+        _scannerState.value = ScannerState.Loading
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.getFoodRecommendations(bodyType = userDosha.lowercase())
+                if (response.isSuccessful && response.body() != null) {
+                    _scannerState.value = ScannerState.FoodRecommendationSuccess(response.body()!!.recommended_foods)
+                } else {
+                    _scannerState.value = ScannerState.Error("Failed to fetch food recommendations.")
+                }
+            } catch (e: Exception) {
+                _scannerState.value = ScannerState.Error("Network Error: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    fun fetchMedicineRecommendations(userDosha: String, disease: String) {
+        _scannerState.value = ScannerState.Loading
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.getMedicineRecommendations(bodyType = userDosha.lowercase(), disease = disease)
+                if (response.isSuccessful && response.body() != null) {
+                    _scannerState.value = ScannerState.MedicineRecommendationSuccess(response.body()!!.recommended_medicines)
+                } else {
+                    _scannerState.value = ScannerState.Error("Failed to fetch medicine recommendations.")
+                }
+            } catch (e: Exception) {
+                _scannerState.value = ScannerState.Error("Network Error: ${e.localizedMessage}")
             }
         }
     }
