@@ -12,6 +12,9 @@ data class FoodItem(
     val vitamins: String,
     val minerals: String,
     val health_tags: String,
+    val vaat_suitable: String?,
+    val pit_suitable: String?,
+    val kapha_suitable: String?,
     val dosha_rating: Int?,
     val dosha_reason: String?,
     val recommendation_type: String?
