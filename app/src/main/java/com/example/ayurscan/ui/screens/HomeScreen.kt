@@ -223,6 +223,8 @@ fun HeaderSection(
     onSearchQueryChange: (String) -> Unit,
     onLogout: () -> Unit = {}
 ) {
+    var profileMenuExpanded by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -230,11 +232,12 @@ fun HeaderSection(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Profile Image (Replaced Placeholder)
+        // Profile Logo with Dropdown
+        Box {
             Surface(
                 modifier = Modifier
-                    .size(50.dp),
+                    .size(50.dp)
+                    .clickable { profileMenuExpanded = true },
                 shape = CircleShape,
                 color = Color.White,
                 shadowElevation = 4.dp
@@ -249,54 +252,71 @@ fun HeaderSection(
                 }
             }
             
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(
-                    text = "Hi, $userName",
-                    color = Color.Black,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-                Text(
-                    text = "Welcome!",
-                    color = Color.Black,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
+            DropdownMenu(
+                expanded = profileMenuExpanded,
+                onDismissRequest = { profileMenuExpanded = false }
+            ) {
+                // Welcome Message
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text(
+                        text = "Hi, $userName",
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    Text(
+                        text = "Welcome!",
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+                Divider()
+                // Logout Button
+                DropdownMenuItem(
+                    text = { Text("Logout", color = Color.Red, fontWeight = FontWeight.Bold) },
+                    onClick = {
+                        profileMenuExpanded = false
+                        onLogout()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.ExitToApp,
+                            contentDescription = "Logout",
+                            tint = Color.Red
+                        )
+                    }
                 )
             }
         }
 
-        // Search Bar
-        Row(
-            verticalAlignment = Alignment.CenterVertically
+        Spacer(modifier = Modifier.width(16.dp))
+
+        // Minimal Animated App Logo / Text
+        val infiniteTransition = rememberInfiniteTransition(label = "headerPulse")
+        val scale by infiniteTransition.animateFloat(
+            initialValue = 0.95f,
+            targetValue = 1.05f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2000),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "pulse"
+        )
+
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.CenterEnd
         ) {
-            TextField(
-                value = searchQuery,
-                onValueChange = onSearchQueryChange,
-                placeholder = { Text("Search", fontSize = 12.sp) }, // Shortened placeholder
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                ),
-                shape = RoundedCornerShape(20.dp),
+            Text(
+                text = "AyurScan",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White,
                 modifier = Modifier
-                    .width(130.dp) // Adjusted width for logout icon
-                    .height(50.dp)
+                    .padding(end = 8.dp)
+                    .scale(scale)
             )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(onClick = onLogout) {
-                Icon(
-                    imageVector = Icons.Default.ExitToApp,
-                    contentDescription = "Logout",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
         }
     }
 }

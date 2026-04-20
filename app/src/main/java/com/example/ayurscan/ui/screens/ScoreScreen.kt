@@ -13,7 +13,15 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ThumbUp
-import androidx.compose.material3.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.example.ayurscan.network.RetrofitClient
+import com.example.ayurscan.model.MedicineItem
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,9 +42,34 @@ fun ScoreScreen(
     onBack: () -> Unit = {}
 ) {
     val doshaInfo = getDoshaInfo(doshaResult)
-    var points by remember { mutableStateOf(1) }
     var streak by remember { mutableStateOf(1) }
     
+    // State for Medicine Dialog
+    var showMedicineDialog by remember { mutableStateOf(false) }
+
+    if (showMedicineDialog) {
+        MedicineDialog(
+            doshaResult = doshaResult,
+            onDismiss = { showMedicineDialog = false }
+        )
+    }
+
+    // State for Dosha Popup
+    var showDoshaPopup by remember { mutableStateOf(true) }
+
+    if (showDoshaPopup) {
+        AlertDialog(
+            onDismissRequest = { showDoshaPopup = false },
+            title = { Text("Dosha Result") },
+            text = { Text("user have a $doshaResult type of bodyDosha") },
+            confirmButton = {
+                TextButton(onClick = { showDoshaPopup = false }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
     // State for Dialog
     var showDialog by remember { mutableStateOf(false) }
     var dialogTitle by remember { mutableStateOf("") }
@@ -89,25 +122,17 @@ fun ScoreScreen(
                 }
                 // Exact title from image
                 Text("Fit Check Score", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
-                Icon(Icons.Default.MoreVert, contentDescription = "Menu", modifier = Modifier.size(30.dp))
+                Spacer(modifier = Modifier.size(30.dp)) // Kept for spacing so Title remains centered
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Points Card
-            StatsCard(
-                title = "Points Earned", 
+            // Medicine Card
+            MedicineActionCard(
+                title = "Medicine", 
                 color = Color(0xFFFBC02D), // Yellow/Gold
                 iconVector = Icons.Filled.Star,
-                value = points,
-                onIncrease = { points++ },
-                onDecrease = { if (points > 0) points-- },
-                onEdit = {
-                    dialogTitle = "Edit Points"
-                    tempValue = points.toString()
-                    onDialogConfirm = { points = it }
-                    showDialog = true
-                }
+                onClick = { showMedicineDialog = true }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -333,4 +358,135 @@ fun SuggestionItem(text: String) {
             Text(text, fontWeight = FontWeight.Medium, color = Color.Black, fontSize = 16.sp)
         }
     }
+}
+
+@Composable
+fun MedicineActionCard(
+    title: String,
+    color: Color,
+    iconVector: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .background(color.copy(alpha = 0.2f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = iconVector,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp),
+                    tint = color
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun MedicineDialog(
+    doshaResult: String,
+    onDismiss: () -> Unit
+) {
+    var disease by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    var medicines by remember { mutableStateOf<List<MedicineItem>?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    val coroutineScope = rememberCoroutineScope()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Ayurvedic Medicine") },
+        text = {
+            Column {
+                Text("Enter your symptom or illness:")
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = disease,
+                    onValueChange = { disease = it },
+                    label = { Text("E.g., fever, cough, pain") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                } else if (error != null) {
+                    Text(error!!, color = Color.Red)
+                } else if (medicines != null) {
+                    if (medicines!!.isEmpty()) {
+                        Text("No medicines found.")
+                    } else {
+                        LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
+                            items(medicines!!) { medicine ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FBE7))
+                                ) {
+                                    Column(modifier = Modifier.padding(8.dp)) {
+                                        Text(medicine.medicine_name, fontWeight = FontWeight.Bold)
+                                        Text("Dosage: ${medicine.dosage}", fontSize = 12.sp)
+                                        Text("Uses: ${medicine.therapeutic_uses}", fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (disease.isNotBlank()) {
+                        isLoading = true
+                        error = null
+                        coroutineScope.launch {
+                            try {
+                                val response = withContext(Dispatchers.IO) {
+                                    RetrofitClient.apiService.getMedicineRecommendations(
+                                        bodyType = doshaResult.lowercase(),
+                                        disease = disease
+                                    )
+                                }
+                                if (response.isSuccessful) {
+                                    val body = response.body()
+                                    medicines = body?.recommended_medicines ?: emptyList()
+                                } else {
+                                    error = "Failed to fetch: ${response.code()}"
+                                }
+                            } catch (e: Exception) {
+                                error = "Error: ${e.message}"
+                            } finally {
+                                isLoading = false
+                            }
+                        }
+                    }
+                }
+            ) {
+                Text("Search")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
 }

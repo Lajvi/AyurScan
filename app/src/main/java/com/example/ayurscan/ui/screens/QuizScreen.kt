@@ -104,7 +104,7 @@ fun QuizScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(30.dp))
                 }
                 Text("Quiz", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Icon(Icons.Default.MoreVert, contentDescription = "Menu", modifier = Modifier.size(30.dp))
+                Spacer(modifier = Modifier.size(30.dp)) // Kept for spacing so Title remains centered
             }
 
             Text(
