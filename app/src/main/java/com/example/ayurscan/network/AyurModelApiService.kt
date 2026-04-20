@@ -19,4 +19,9 @@ interface AyurModelApiService {
         @Query("disease") disease: String,
         @Query("limit") limit: Int = 8
     ): Response<MedicineRecommendationResponse>
+
+    @GET("api/food/{food_name}")
+    suspend fun getFoodDetails(
+        @retrofit2.http.Path("food_name") foodName: String
+    ): Response<com.example.ayurscan.model.FoodItem>
 }

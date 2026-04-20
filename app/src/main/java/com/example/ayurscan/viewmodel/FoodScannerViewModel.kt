@@ -50,7 +50,7 @@ class FoodScannerViewModel : ViewModel() {
             You are an expert Ayurvedic practitioner. A user whose primary Dosha is **$userDosha** is asking about a specific food.
             
             Based on the provided ${if (image != null) "image and/or " else ""}text:
-            1. Identify the food.
+            1. Identify the food. MANDATORY: At the very beginning of your response, output ONLY the exact, simple name of the food enclosed in brackets like this: [FOOD_NAME: Apple] or [FOOD_NAME: Almonds].
             2. What are the doshic qualities of this food (does it aggravate or pacify Vata, Pitta, and Kapha)?
             3. Is it good for this specific user's Dosha ($userDosha)? 
             4. Provide dietary advice: how much should they consume, and are there specific preparation methods (e.g., add warming spices, eat raw vs. cooked) to make it better for them?
@@ -73,13 +73,44 @@ class FoodScannerViewModel : ViewModel() {
                 val response = generativeModel.generateContent(inputContent)
                 val responseText = response.text
                 if (responseText != null) {
-                    _scannerState.value = ScannerState.Success(responseText)
+                    var finalResponse = responseText
+
+                    // Extract food name
+                    val foodNameRegex = "\\[FOOD_NAME:\\s*(.*?)\\]".toRegex()
+                    val matchResult = foodNameRegex.find(responseText)
+                    var queryFoodName = textQuery
+                    if (matchResult != null) {
+                        val foodName = matchResult.groupValues[1].trim()
+                        queryFoodName = foodName
+                        // Strip the tag from the final response to keep it clean
+                        finalResponse = finalResponse.replace(matchResult.value, "").trim()
+
+                        // Fetch detailed dosha info from our Ayur model API
+                        try {
+                            val apiResponse = RetrofitClient.apiService.getFoodDetails(foodName)
+                            if (apiResponse.isSuccessful) {
+                                val foodDetails = apiResponse.body()
+                                if (foodDetails != null) {
+                                    val apiInsights = "\n\n**Integration Insights from Ayur Model for $foodName:**\n" +
+                                            "• **Vata Suitable:** ${foodDetails.vaat_suitable ?: "Not specified"}\n" +
+                                            "• **Pitta Suitable:** ${foodDetails.pit_suitable ?: "Not specified"}\n" +
+                                            "• **Kapha Suitable:** ${foodDetails.kapha_suitable ?: "Not specified"}\n"
+                                    finalResponse += apiInsights
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Backend might be unavailable or food not found in DB
+                            // We gracefully fallback to just showing the Gemini analysis
+                        }
+                    }
+
+                    _scannerState.value = ScannerState.Success(finalResponse)
                     // Save to Firestore
                     auth.currentUser?.uid?.let { uid ->
                         val record = FoodScanRecord(
                             userId = uid,
-                            foodName = textQuery ?: "Unknown Food",
-                            doshicAnalysis = responseText
+                            foodName = queryFoodName ?: "Unknown Food",
+                            doshicAnalysis = finalResponse
                         )
                         repository.saveFoodScan(record)
                     }
