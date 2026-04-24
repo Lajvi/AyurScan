@@ -24,7 +24,11 @@ class FirestoreRepository {
     }
 
     suspend fun updateUserDosha(uid: String, dosha: String) {
-        usersCollection.document(uid).update("primaryDosha", dosha).await()
+        try {
+            usersCollection.document(uid).set(mapOf("primaryDosha" to dosha), com.google.firebase.firestore.SetOptions.merge()).await()
+        } catch (e: Exception) {
+            // Ignore error so it doesn't crash the app
+        }
     }
 
     suspend fun saveFoodScan(record: FoodScanRecord) {
